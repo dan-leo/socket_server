@@ -1,16 +1,30 @@
 {
-  "name": "socket",
+  "name": "socket_server",
   "version": "1.0.0",
-  "description": "",
+  "description": "This is a good cross-network testing solution between socket clients",
   "main": "server.js",
   "dependencies": {
     "net": "^1.0.2"
   },
   "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node server.js",
     "start": "node server.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daniel-leonard-robinson/socket_server.git"
+  },
+  "keywords": [
+    "socket",
+    "server",
+    "cllient",
+    "chat"
+  ],
   "author": "Daniel Robinson",
-  "license": "ISC"
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/daniel-leonard-robinson/socket_server/issues"
+  },
+  "homepage": "https://github.com/daniel-leonard-robinson/socket_server#readme"
 }
