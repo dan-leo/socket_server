@@ -1,46 +1,54 @@
-var net = require('net');
+// Load the TCP Library
+net = require('net');
 
+// Port
 PORT = 23;
-HOST = '';
 
-var sockets  = [];
+// Keep track of the clients
+var clients = [];
 
-var char, string = "";
-
+// Start a TCP Server
 var server = net.createServer(function (socket) {
-    socket.write('Welcome to the Telnet server!\r\n');
-    // socket.end('goodbye');
-});
 
-server.listen({
-    port: PORT,
-    host: HOST
-}, function () {
-    address = server.address();
-console.log('opened server on %j', address);
-});
+    // Identify this client
+    socket.name = socket.remoteAddress + ":" + socket.remotePort
 
-server.on('connection', function (socket) {
-    sockets.push(socket);
-    remoteAddr = socket.remoteAddress;
-    socket.write('connected\r\n');
-    console.log('remote ip: %s', remoteAddr);
-    server.getConnections(function (err, count) {
-        console.log('connections: %j', count);
+    // Put this new client in the list
+    clients.push(socket);
+
+    // Send a nice welcome message and announce
+    socket.write("Welcome " + socket.name + "\n");
+    broadcast(socket.name + " joined the chat\n", socket);
+
+    // Handle incoming messages from clients.
+    socket.on('data', function (data) {
+        broadcast(socket.name + "> " + data, socket);
     });
 
-    socket.on('data', function (data){
-        receiveData(socket, data);
-        // socket.write(data + '\r');
+    // Remove the client from the list when it leaves
+    socket.on('end', function () {
+        clients.splice(clients.indexOf(socket), 1);
+        broadcast(socket.name + " left the chat.\n");
     });
 
-    socket.on('close', function(){
-        closeSocket(socket);
-        console.log('%s is now closed', remoteAddr);
-    })
-});
+    // Send a message to all clients
+    function broadcast(message, sender) {
+        clients.forEach(function (client) {
+            // Don't want to send it to sender
+            if (client === sender) return;
+            client.write(message);
+        });
+        // Log it to the server output too
+        process.stdout.write(message + '\n')
+    }
+
+}).listen(PORT);
+
+// Put a friendly message on the terminal of the server.
+console.log("Chat server running at port " + PORT + "\n");
 
 server.on('error', function (e) {
+    console.log('Error: ' + e);
     if (e.code == 'EADDRINUSE') {
         console.log('Address in use, retrying...');
         setTimeout(function () {
@@ -48,72 +56,7 @@ server.on('error', function (e) {
             server.listen(PORT, HOST);
         }, 1000);
     }
+    else if (e.code == 'ECONNRESET') {
+        console.log('Remote connection reset.');
+    }
 });
-
-/*
- * Method executed when a socket ends
- */
-function closeSocket(socket) {
-    var i = sockets.indexOf(socket);
-    if (i != -1) {
-        sockets.splice(i, 1);
-    }
-}
-
-/*
- * Print a socket stream of data to console.
- */
-function print_stream(data, id, remoteAddr) {
-    char = data.toString().charCodeAt(0);
-
-    if (char === 10 || char === 13){
-        console.log(id + " " + remoteAddr + " " + string);
-        string = "";
-    }
-    else
-    {
-        string+=data.toString();
-    }
-}
-
-/*
- * Cleans the input of carriage return, newline
- */
-function cleanInput(data) {
-    return data.toString().replace(/(\r\n|\n|\r)/gm,"");
-}
-
-/*
- * Method executed when data is received from a socket
- */
-function receiveData(socket, data) {
-    var cleanData = cleanInput(data);
-    if(cleanData === "@quit") {
-        socket.end('Goodbye!\n');
-    }
-    else {
-        for(var i = 0; i < sockets.length; i++) {
-            if (sockets[i] !== socket) {
-                sockets[i].write(data);
-            }
-            else
-            {
-                print_stream(data, i, sockets[i].remoteAddress);
-            }
-        }
-    }
-}
-
-/*
- * Callback method executed when a new TCP socket is opened.
- */
-function newSocket(socket) {
-    sockets.push(socket);
-    socket.write('Welcome to the Telnet server!\n');
-    socket.on('data', function(data) {
-        receiveData(socket, data);
-    });
-    socket.on('end', function() {
-        closeSocket(socket);
-    });
-}
